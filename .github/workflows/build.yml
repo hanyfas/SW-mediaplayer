@@ -1,0 +1,112 @@
+name: Build & Package Installer
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  # Allow manual trigger from the GitHub UI
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on Windows
+    runs-on: windows-latest   # Free Windows Server 2022 runner with VS 2022
+
+    steps:
+    # ── 1. Checkout ───────────────────────────────────────────────────────────
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # ── 2. Cache vcpkg packages ───────────────────────────────────────────────
+    # This means the 10-minute download only happens ONCE — subsequent builds
+    # restore from cache in ~30 seconds.
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          C:\vcpkg\installed
+          C:\vcpkg\packages
+          C:\vcpkg\buildtrees
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-
+
+    # ── 3. Setup vcpkg ────────────────────────────────────────────────────────
+    - name: Setup vcpkg
+      run: |
+        if (-not (Test-Path "C:\vcpkg")) {
+          git clone https://github.com/microsoft/vcpkg C:\vcpkg
+        }
+        C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+      shell: pwsh
+
+    # ── 4. Install dependencies via vcpkg ────────────────────────────────────
+    - name: Install dependencies
+      run: |
+        C:\vcpkg\vcpkg install `
+          ffmpeg[avcodec,avformat,avutil,swscale,swresample,gpl,nonfree,qsv]:x64-windows-static `
+          nlohmann-json:x64-windows-static
+      shell: pwsh
+
+    # ── 5. Configure CMake ────────────────────────────────────────────────────
+    - name: Configure CMake
+      run: |
+        cmake -B build/release `
+          -G "Visual Studio 17 2022" -A x64 `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+      shell: pwsh
+
+    # ── 6. Build ──────────────────────────────────────────────────────────────
+    - name: Build Release
+      run: |
+        cmake --build build/release --config Release --parallel
+      shell: pwsh
+
+    # ── 7. Collect artifacts ──────────────────────────────────────────────────
+    - name: Collect build artifacts
+      run: |
+        New-Item -ItemType Directory -Force -Path dist
+        Copy-Item "build\release\Release\SignagePlayer.exe" dist\
+        Copy-Item "playlist.json"                           dist\
+        # Shaders are copied post-build by CMake; grab from the output dir
+        if (Test-Path "build\release\Release\shaders") {
+          Copy-Item -Recurse "build\release\Release\shaders" dist\shaders
+        } else {
+          Copy-Item -Recurse "shaders" dist\shaders
+        }
+        # VC++ runtime is statically linked, nothing extra needed
+      shell: pwsh
+
+    # ── 8. Build Inno Setup installer ─────────────────────────────────────────
+    - name: Build installer (Inno Setup)
+      run: |
+        # Inno Setup is pre-installed on windows-latest runners
+        $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+        if (-not (Test-Path $iscc)) {
+          # Install it if somehow missing
+          choco install innosetup -y --no-progress
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+        }
+        & $iscc "installer\setup.iss"
+      shell: pwsh
+
+    # ── 9. Upload installer as artifact ──────────────────────────────────────
+    - name: Upload installer artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SignagePlayer-Installer
+        path: installer\Output\SignagePlayerSetup.exe
+        retention-days: 30
+
+    # ── 10. Create GitHub Release on version tags (e.g. v1.0.0) ─────────────
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: installer\Output\SignagePlayerSetup.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

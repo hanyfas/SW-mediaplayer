@@ -1,0 +1,19 @@
+{
+  "loop": true,
+  "transition": {
+    "type": "crossfade",
+    "duration_ms": 500
+  },
+  "items": [
+    {
+      "path": "C:\\Signage\\video1.mp4",
+      "duration_ms": 0,
+      "type": "video"
+    },
+    {
+      "path": "C:\\Signage\\image1.jpg",
+      "duration_ms": 5000,
+      "type": "image"
+    }
+  ]
+}
