@@ -6,11 +6,9 @@
       "name": "ffmpeg",
       "default-features": false,
       "features": [
-        "avcodec", "avformat", "avutil",
+        "avcodec", "avformat",
         "swscale", "swresample",
-        "gpl", "nonfree",
-        "nvcodec", "qsv",
-        "dav1d"
+        "gpl", "qsv"
       ]
     },
     "nlohmann-json"
