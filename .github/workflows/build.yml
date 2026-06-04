@@ -41,13 +41,12 @@ jobs:
         C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
       shell: pwsh
 
-    # ── 4. Install dependencies via vcpkg ────────────────────────────────────
+    # ── 4. Install dependencies via vcpkg (manifest mode) ────────────────────
     - name: Install dependencies
       run: |
-        C:\vcpkg\vcpkg install `
-          ffmpeg[avcodec,avformat,avutil,swscale,swresample,gpl,nonfree,qsv]:x64-windows-static `
-          nlohmann-json:x64-windows-static
+        C:\vcpkg\vcpkg install --triplet x64-windows-static
       shell: pwsh
+      working-directory: ${{ github.workspace }}
 
     # ── 5. Configure CMake ────────────────────────────────────────────────────
     - name: Configure CMake
