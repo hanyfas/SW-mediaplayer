@@ -16,35 +16,27 @@ add_executable(SignagePlayer WIN32 ${SOURCES})
 # ── Include paths ─────────────────────────────────────────────────────────────
 target_include_directories(SignagePlayer PRIVATE
     src
-    ${CMAKE_SOURCE_DIR}/third_party/ffmpeg/include
-    ${CMAKE_SOURCE_DIR}/third_party/live555/include
-    ${CMAKE_SOURCE_DIR}/third_party/cef/include
 )
 
 # ── vcpkg / find_package ─────────────────────────────────────────────────────
 find_package(nlohmann_json CONFIG REQUIRED)
 
-# FFmpeg via vcpkg
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(FFMPEG IMPORTED_TARGET
-        libavcodec libavformat libavutil libswscale libswresample)
-endif()
-if(NOT FFMPEG_FOUND)
-    find_package(FFmpeg REQUIRED COMPONENTS avcodec avformat avutil swscale swresample)
+# FFmpeg via vcpkg — uses old-style variables: FFMPEG_LIBRARIES / FFMPEG_INCLUDE_DIRS
+find_package(FFMPEG REQUIRED)
+message(STATUS "FFmpeg include dirs: ${FFMPEG_INCLUDE_DIRS}")
+message(STATUS "FFmpeg libraries:    ${FFMPEG_LIBRARIES}")
+
+target_include_directories(SignagePlayer PRIVATE ${FFMPEG_INCLUDE_DIRS})
+if(FFMPEG_LIBRARY_DIRS)
+    target_link_directories(SignagePlayer PRIVATE ${FFMPEG_LIBRARY_DIRS})
 endif()
 
 # ── Link libraries ────────────────────────────────────────────────────────────
 target_link_libraries(SignagePlayer PRIVATE
     nlohmann_json::nlohmann_json
 
-    # FFmpeg
-    $<IF:$<TARGET_EXISTS:PkgConfig::FFMPEG>,PkgConfig::FFMPEG,
-        FFmpeg::avcodec
-        FFmpeg::avformat
-        FFmpeg::avutil
-        FFmpeg::swscale
-        FFmpeg::swresample>
+    # FFmpeg (old-style variable from vcpkg's FindFFMPEG.cmake)
+    ${FFMPEG_LIBRARIES}
 
     # Direct3D / DXGI
     d3d11
