@@ -3,8 +3,8 @@
 
 #define AppName      "Signage Player"
 #define AppVersion   "1.0.0"
-#define AppPublisher "Your Company"
-#define AppURL       "https://github.com/hanifathi/SW-mediaplayer"
+#define AppPublisher "hanyfas"
+#define AppURL       "https://github.com/hanyfas/SW-mediaplayer"
 #define AppExeName   "SignagePlayer.exe"
 
 [Setup]
