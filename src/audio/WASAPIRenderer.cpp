@@ -1,8 +1,10 @@
 #include "WASAPIRenderer.h"
 #include <stdexcept>
 #include <algorithm>
+#include <avrt.h>
 
 #pragma comment(lib, "ole32.lib")
+#pragma comment(lib, "avrt.lib")
 
 bool WASAPIRenderer::Init()
 {

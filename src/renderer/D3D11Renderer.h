@@ -25,6 +25,19 @@ struct DisplaySlot {
     VideoFrame              frame;
     float                   alpha{1.f};    // 0=transparent, 1=opaque
     bool                    hasFrame{false};
+
+    // mutex is not movable; callers that move slots must hold both locks already
+    DisplaySlot() = default;
+    DisplaySlot(DisplaySlot&& o) noexcept
+        : frame(std::move(o.frame)), alpha(o.alpha), hasFrame(o.hasFrame) {}
+    DisplaySlot& operator=(DisplaySlot&& o) noexcept {
+        if (this != &o) {
+            frame    = std::move(o.frame);
+            alpha    = o.alpha;
+            hasFrame = o.hasFrame;
+        }
+        return *this;
+    }
 };
 
 class D3D11Renderer {
